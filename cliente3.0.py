@@ -4,28 +4,48 @@ import socket
 import struct
 import sys
 
+#codigo dorgival
+def carry_around_add(a, b):
+    c = a + b
+    return(c &0xffff)+(c >>16)
+
+#codigo dorgival
+def checksum(msg):
+    s =0
+    for i in range(0, len(msg),2):
+        w = msg[i]+(msg[i+1]<<8)
+        s = carry_around_add(s, w)
+    return~s &0xffff
 
 
-def send_message():
-    # f = open("myfile", "rb")
-    # try:
-    #     byte = f.read(1)
-    #     while byte != "":
-    #         # Do stuff with byte.
-    #         byte = f.read(1)
-    # finally:
-    #     f.close()
-    #while(1) fazer tudo abaixo:(ENQUANTO EXISTIREM DADOS NO TXT)
-    #VERIFICAR SE SYNC SYNC ESTAO CORRETOS
-    #VERIFICAR SE LENGTH > 0
-    #VERIFICAR CHECKSUM
-    #PULAR 16BITS RESERVED
-    #LER DADOS ATE O TAMANHO LENGTH
-    #CRIAR SOCKET COM NUMERO DA PORTA DADO E CONECTA-SE AO IP DADO
-    #DAR PACK NOS DADOS
-    #ENVIAR DADOS
-    pass
+def sendFile(sock, filename, length):
+	fin = open(filename, 'r')
+	#read and send 8KB by 8KB until theres nothing left
+	while True:
+		data = f.read(length)
+		datasz = len(data)
+		if datasz==0:
+			break
+		#chcksum
+		chck = 0
+		reserved = 0
 
+		head = struct.pack('!L', 0xDCC023C2) + struct.pack('!L', 0xDCC023C2)
+		mid = struct.pack('!H', datasz) + struct.pack('!H', reserved)
+		msg =  head + struct.pack('!H', chck) + mid + data
+		chck = checksum(msg)
+		msg = head + struct.pack('!H', chck) + mid + data
+
+		sock.send(msg)
+
+def makeConnection(host, port):
+	sock = socket.socket(AF_INET, socket.SOCK_STREAM)
+	sock.connect((host,port))
+	return sock
+
+def client(filename, host, port, length):
+	sock = makeConnection(host,port)
+	sendFile(sock, filename, 8192)
 
 def receive_message():
     TCP_IP = '127.0.0.1'
